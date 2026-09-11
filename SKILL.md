@@ -138,9 +138,15 @@ Install this skill and clone the full repo into /var/minis/skills/minis-bridge/:
 
 https://github.com/OpenMinis/MinisSkills/tree/main/minis-bridge
 
-After cloning, verify that /var/minis/skills/minis-bridge/scripts/bridge-loop.sh
-is executable and that scripts/bridge-dispatch.sh can read the inbox dir.
+After cloning, make the dispatcher and hook scripts executable:
+
+chmod +x /var/minis/skills/minis-bridge/scripts/bridge-dispatch.sh
+chmod +x /var/minis/skills/minis-bridge/scripts/agent-hook.sh
 ```
+
+Confirm `scripts/bridge-dispatch.sh` can read the inbox dir (it
+defaults to `/var/minis/mounts/iCloud/Hermes-Minis/` — override with
+`MINIS_BRIDGE_QUEUE` if your mount is elsewhere).
 
 If the repo URL does not yet contain this skill (it is being contributed
 upstream), use the local-install fallback described at the end of this
@@ -207,17 +213,22 @@ queue's `processed/` directory to see whether the request was picked up.
 python minis_bridge.py --send "Summarise today's calendar in 3 bullets."
 ```
 
-### One-shot with attachment
+### One-shot with a pre-fetched file
+
+If you want to send Minis a file (a long prompt, a transcript, an
+article body), write it locally and pass the path:
 
 ```bash
 python minis_bridge.py \
-  --send "Run munger-advisor on this Substack article." \
-  --attach https://example.com/article
+  --send "Run munger-advisor on the attached Substack article." \
+  --send-file ./substack-article.md
 ```
 
-The helper downloads the URL into a temp file, embeds the path in the
-frontmatter, and lets Minis use its `browser_use` to fetch the actual
-content.
+The helper reads the file and inlines its body into the request.
+Frontmatter is auto-extracted if present, otherwise the entire file
+becomes the user message. If you only have a URL, fetch the page
+yourself first (`curl`, `wget`, `browser_use` on Hermes side) and
+then pass the saved file with `--send-file`.
 
 ### Synchronous wait (block until reply)
 
