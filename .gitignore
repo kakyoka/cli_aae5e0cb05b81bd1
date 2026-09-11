@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
+# macOS / iOS / Windows editor noise
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
