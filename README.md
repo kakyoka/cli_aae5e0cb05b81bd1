@@ -27,6 +27,32 @@ No HTTP server. No MCP. No webhook. No SSH. The transport is iCloud Drive sync, 
   implementations.
 - `scripts/minis_bridge.py` — a Hermes-side CLI: `--send`,
   `--send-file`, `--read`, `--wait`, `--no-wait`.
+- `release-notes.md` — change history.
+
+## Changes
+
+### v1.0.1 (2026-09-11) — docs-only
+
+Fixed three documentation drifts in `SKILL.md`:
+
+- Step 2 no longer tells you to `chmod +x scripts/bridge-loop.sh` —
+  that script does not exist; the real pair is `bridge-dispatch.sh`
+  and `agent-hook.sh`.
+- The "send a Substack article to Minis" example no longer uses
+  `--attach <URL>`, which the CLI never supported. It now uses
+  `--send-file ./local.md`, which is a real flag.
+- No mention of a fictional `--link` flag.
+
+Every `--flag` mentioned in `SKILL.md` is now defined in
+`scripts/minis_bridge.py`. See `release-notes.md` for the full audit
+table.
+
+Commit: `92406f81`.
+
+### v1.0.0 (2026-09-11) — initial release
+
+Bidirectional iCloud Drive message-queue bridge. See `SKILL.md` for
+the full protocol and install. Commit: `f7e9dfb`.
 
 ## Install
 
