@@ -66,6 +66,22 @@ python scripts/feishu_relay.py --ack-push <push-id>
 
 `--pull-push` 返回最早一条未确认消息的 JSON；`--ack-push` 后不会再次拉到。该消息会持久停在飞书队列里，但不会凭空注入已打开的 Desktop 对话；无人值守提醒需要再配置常驻 receiver/cron。
 
+#### Real iPhone reverse-push verification — passed
+
+```text
+upgrade request: iphone-minis-push-v130-1789227865
+upgrade reply:   MINIS_V130_READY
+push id:         push-1789228346
+push body:       HELLO_HERMES_FROM_MINIS
+push time:       2026-09-12T15:52:27.163Z
+ack time:        2026-09-12T15:53:58.771Z
+push → ack:      91.608 s (includes waiting before Hermes checked)
+post-ack status: absent from pending pushes
+```
+
+This proves the push originated from the iPhone Minis installation rather
+than the Windows transport-loop fixture.
+
 ## One-time configuration
 
 Win 与 Minis 本地环境需要：

@@ -152,6 +152,20 @@ python scripts/feishu_relay.py --ack-push <push-id>
 
 确认后的 push 不再由 `--pull-push` 返回。
 
+真机验收（iPhone Minis v1.3.0）：
+
+```text
+upgrade reply: MINIS_V130_READY
+push id:       push-1789228346
+push body:     HELLO_HERMES_FROM_MINIS
+push UTC:      2026-09-12T15:52:27.163Z
+ack UTC:       2026-09-12T15:53:58.771Z
+elapsed:       91.608 s（含 Hermes 开始检查前的人工等待）
+after ack:     pending 中已消失
+```
+
+该 push 由 iPhone Minis 真实运行 `--push` 产生，不是 Windows 自发自收回环。
+
 ## Verified evidence
 
 ### Complete Win ↔ iPhone Minis E2E — passed

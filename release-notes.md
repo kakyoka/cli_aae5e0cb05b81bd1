@@ -14,6 +14,22 @@ This adds durable reverse delivery over Feishu. Automatic injection into an
 already-open Hermes Desktop conversation is intentionally not claimed; that
 requires a separately configured receiver/cron or gateway hook.
 
+### Real iPhone reverse-push pass
+
+```text
+upgrade reply: MINIS_V130_READY
+push id:       push-1789228346
+push body:     HELLO_HERMES_FROM_MINIS
+push:          2026-09-12T15:52:27.163Z
+ack:           2026-09-12T15:53:58.771Z
+elapsed:       91.608 s (includes waiting before Hermes checked)
+after ack:     no longer pending
+```
+
+The message originated from the iPhone Minis v1.3.0 installation. Windows
+received and acknowledged it, and a second history check confirmed the ACK
+filter removed it from pending results.
+
 ---
 
 ## v1.2.1 — 2026-09-12 — real iPhone E2E + reply idempotency
