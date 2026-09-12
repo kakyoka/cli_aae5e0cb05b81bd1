@@ -1,5 +1,39 @@
 # Release notes
 
+## v1.2.1 — 2026-09-12 — real iPhone E2E + reply idempotency
+
+### Complete real-device result
+
+```text
+request id: iphone-minis-smoke-1789192695
+Win request:  2026-09-12T05:58:19.780Z
+first reply:  2026-09-12T14:30:12.373Z
+latency:      30,712.593 s (includes waiting for manual setup)
+result:       MINIS_FEISHU_E2E_OK
+```
+
+The iPhone Minis session pulled and processed the original Windows request,
+replied with the same ID, and Windows read back the non-empty answer. This is
+the first complete Win Hermes ↔ iPhone Minis E2E acceptance pass.
+
+### Duplicate-reply fix
+
+The first run created two replies for the same ID, 15.342 seconds apart.
+`--reply` now queries history first; if the ID already has a reply, it prints
+`<id> already replied` and sends nothing.
+
+Verification:
+
+```text
+python -m unittest discover -s tests -v
+Ran 7 tests — OK
+
+real Feishu idempotency probe:
+iphone-minis-smoke-1789192695 already replied
+```
+
+---
+
 ## v1.2.0 — 2026-09-12 — Feishu relay becomes the default
 
 ### Why

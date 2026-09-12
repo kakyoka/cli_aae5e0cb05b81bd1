@@ -82,6 +82,9 @@ class EnvelopeTests(unittest.TestCase):
             def __init__(self):
                 self.sent = []
 
+            def list_messages(self):
+                return []
+
             def send_text(self, text):
                 self.sent.append(text)
                 return "om_reply"
@@ -93,6 +96,30 @@ class EnvelopeTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         env = decode_envelope(client.sent[0])
         self.assertEqual((env.kind, env.request_id, env.body), ("reply", "req-1", "处理完成"))
+
+    def test_reply_cli_is_idempotent_when_reply_already_exists(self):
+        class FakeClient:
+            def __init__(self):
+                self.sent = []
+
+            def list_messages(self):
+                return [{
+                    "create_time": "1",
+                    "sender": {"sender_type": "app"},
+                    "body": {"content": __import__("json").dumps({"text": encode_reply("req-1", "first")})},
+                }]
+
+            def send_text(self, text):
+                self.sent.append(text)
+                return "om_duplicate"
+
+        client = FakeClient()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            rc = main(["--reply", "req-1", "--text", "second"], client=client)
+        self.assertEqual(rc, 0)
+        self.assertEqual(client.sent, [])
+        self.assertIn("already replied", stdout.getvalue())
 
     def test_read_cli_prints_matching_reply_only(self):
         class FakeClient:

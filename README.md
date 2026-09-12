@@ -62,7 +62,35 @@ FEISHU_MINIS_CHAT_ID
 
 ## Verification status
 
-2026-09-12 已完成真实飞书传输回环：
+### Complete real-device E2E — passed 2026-09-12
+
+```text
+request id: iphone-minis-smoke-1789192695
+Win request created: 2026-09-12T05:58:19.780Z
+first iPhone reply: 2026-09-12T14:30:12.373Z
+first reply latency: 30,712.593 s (8 h 31 m 52.593 s; includes waiting for manual setup)
+result: MINIS_FEISHU_E2E_OK
+```
+
+Verified path:
+
+```text
+Win --send → Feishu → iPhone Minis --pull
+→ active Minis session processed the body → iPhone --reply
+→ Win --read same request ID → non-empty matching reply
+```
+
+Manual operations in this first setup run:
+
+1. One-time environment-variable configuration on iPhone.
+2. One Minis-session instruction to install/process the bridge.
+
+The first run produced two replies for the same ID, 15.342 seconds apart.
+v1.2.1 adds reply idempotency: `--reply` checks history and returns
+`<id> already replied` without sending if a reply already exists. This guard
+passed seven unit tests and a real Feishu probe.
+
+### Earlier transport-only loop
 
 ```text
 send → pull → reply → read
@@ -70,7 +98,8 @@ request id: minis-e2e-1789191679
 result: Feishu relay transport loop OK.
 ```
 
-这证明飞书 API 传输、协议解析和关联 ID 工作。**完整 Win↔iPhone Minis 端到端仍需 iPhone Minis 真机执行一次 `--pull` + agent 处理 + `--reply` 后才能宣告通过。**
+This earlier test proved only API transport; the smoke test above proves the
+full iPhone Minis agent hop.
 
 ## Legacy: iCloud queue（不可作为默认）
 

@@ -123,7 +123,26 @@ Minis 最终答案
 
 ## Verified evidence
 
-2026-09-12 Windows 真实飞书回环：
+### Complete Win ↔ iPhone Minis E2E — passed
+
+```text
+request id: iphone-minis-smoke-1789192695
+Win request:  2026-09-12T05:58:19.780Z
+first reply:  2026-09-12T14:30:12.373Z
+latency:      30,712.593 s (includes waiting for manual setup)
+result:       MINIS_FEISHU_E2E_OK
+```
+
+The active iPhone Minis session pulled the original request, processed it,
+sent a reply with the same request ID, and Windows read a non-empty matching
+reply. This meets the full E2E acceptance criteria.
+
+The first device run accidentally sent two replies 15.342 seconds apart.
+v1.2.1 prevents recurrence by checking for an existing reply before sending.
+The guard passed seven unit tests and a real probe that returned
+`already replied` without creating another message.
+
+### Earlier Windows transport-only loop
 
 ```text
 send → pull → reply → read
@@ -138,7 +157,7 @@ read result: Feishu relay transport loop OK.
 - 同一 bot 可从 chat history 回读自己的消息；
 - 回读消息 `sender_type=app`。
 
-注意：以上证明**飞书传输层**已真通；只有在 iPhone Minis 真实执行 `--pull`、处理并 `--reply` 后，才可宣布完整 Win↔Minis 端到端成功。
+上面的早期回环只证明传输层；`iphone-minis-smoke-1789192695` 已进一步完成 iPhone Minis agent hop。
 
 ## Security
 

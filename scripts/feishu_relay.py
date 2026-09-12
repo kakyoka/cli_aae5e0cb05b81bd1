@@ -186,6 +186,10 @@ def main(argv: Sequence[str] | None = None, client=None) -> int:
     if args.reply:
         if args.text is None:
             parser.error("--reply requires --text")
+        existing = find_reply(active_client.list_messages(), args.reply)
+        if existing:
+            print(f"{args.reply} already replied")
+            return 0
         active_client.send_text(encode_reply(args.reply, args.text))
         print(args.reply)
         return 0

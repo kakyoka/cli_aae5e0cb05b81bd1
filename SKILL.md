@@ -1,6 +1,6 @@
 ---
 name: minis-bridge
-version: 1.2.0
+version: 1.2.1
 description: >
   Bidirectional relay between Hermes Desktop and Open Minis on iPhone.
   Use when the user wants Win Hermes to send a task to an active Minis
@@ -17,7 +17,7 @@ compatibility: >
 
 # Minis Bridge — Hermes ↔ Minis via Feishu Relay
 
-## Default path (v1.2.0)
+## Default path (v1.2.1)
 
 ```text
 Win Hermes --send → Feishu [MINIS_REQ] → Minis --pull
