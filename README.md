@@ -19,7 +19,23 @@ Minis tools/skills → Feishu [MINIS_REPLY] → Win Hermes --read
 
 完整安装、Minis 处理命令和安全边界：[`references/feishu-relay.md`](references/feishu-relay.md)
 
-## Quick start
+## Quick start：直接说人话
+
+### 在 Hermes
+
+```text
+发给 Minis：帮我把这篇文章总结成三点
+看看 Minis 发了什么
+```
+
+### 在 Minis
+
+```text
+发给 Hermes：我处理完了，还有一个风险需要提醒
+处理 Hermes 发来的消息
+```
+
+两端 Skill 会自动翻译成底层 `send/pull/reply/push/ack`，正常使用时无需输入 Python 命令。以下 CLI 仅供调试。
 
 ### Win 发送
 

@@ -1,5 +1,25 @@
 # Release notes
 
+## v1.3.1 — 2026-09-12 — natural-language commands
+
+Users no longer need to type CLI commands during normal use.
+
+Hermes-side phrases:
+
+- `发给 Minis：<内容>` / `告诉 Minis：<内容>` / `问 Minis：<问题>`
+- `看看 Minis 发了什么` / `收一下 Minis 的消息`
+
+Minis-side phrases:
+
+- `发给 Hermes：<内容>` / `告诉 Hermes：<内容>` / `问 Hermes：<问题>`
+- `处理 Hermes 发来的消息` / `看看 Hermes 发了什么`
+
+The Skill maps these phrases to the already-tested Feishu CLI and preserves
+the same send-success, request-ID, ACK-after-handling, and no-fabrication
+rules. No transport code or credential format changed.
+
+---
+
 ## v1.3.0 — 2026-09-12 — Minis-initiated push messages
 
 - Added `[MINIS_PUSH]` and `[MINIS_PUSH_ACK]` envelopes.

@@ -1,6 +1,6 @@
 ---
 name: minis-bridge
-version: 1.3.0
+version: 1.3.1
 description: >
   Bidirectional relay between Hermes Desktop and Open Minis on iPhone.
   Use when the user wants Win Hermes to send a task to an active Minis
@@ -17,7 +17,7 @@ compatibility: >
 
 # Minis Bridge — Hermes ↔ Minis via Feishu Relay
 
-## Default path (v1.3.0)
+## Default path (v1.3.1)
 
 ```text
 Win Hermes --send → Feishu [MINIS_REQ] → Minis --pull
@@ -26,6 +26,32 @@ Minis tools/skills → Feishu [MINIS_REPLY] → Win Hermes --read
 
 Use `scripts/feishu_relay.py`. Full setup, protocol, security boundaries,
 and real verification evidence are in `references/feishu-relay.md`.
+
+## Natural-language contract (v1.3.1)
+
+The user never needs to type Python commands. Interpret these phrases by the
+side on which they are spoken:
+
+### In Hermes
+
+- `发给 Minis：<内容>` / `告诉 Minis：<内容>` / `问 Minis：<问题>`
+  - Run `python scripts/feishu_relay.py --send "<内容>"`.
+  - Report the generated request ID; never claim delivery before the API call succeeds.
+- `看看 Minis 发了什么` / `收一下 Minis 的消息`
+  - Run `--pull-push`.
+  - If a push exists, present its body, handle it as a Minis-authored message,
+    then run `--ack-push <id>` only after successful handling.
+  - If output is `null`, say there is no pending push.
+
+### In Minis
+
+- `发给 Hermes：<内容>` / `告诉 Hermes：<内容>` / `问 Hermes：<问题>`
+  - Run `python3 /var/minis/skills/minis-bridge/scripts/feishu_relay.py --push "<内容>"`.
+  - Report the push ID only after Feishu accepts it.
+- `处理 Hermes 发来的消息` / `看看 Hermes 发了什么`
+  - Follow the `process feishu bridge` workflow below (`--pull`, process, `--reply`).
+
+Do not expose CLI syntax unless the user explicitly asks for technical details.
 
 When the user says **`process feishu bridge`** inside Minis:
 
