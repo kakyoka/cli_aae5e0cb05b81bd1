@@ -1,6 +1,6 @@
 ---
 name: minis-bridge
-version: 1.0.0
+version: 1.1.0
 description: >
   Bidirectional message bridge between Hermes Desktop and Open Minis on iPhone,
   via an iCloud Drive message-queue directory. Trigger this skill whenever the
@@ -304,6 +304,88 @@ same Mac that owns the iCloud account.
 Apple will not raise an error — it just stops syncing. Free space on the
 account that owns the Hermes-Minis folder. The bridge does not prune
 old messages; consider archiving `processed/` weekly.
+
+## Win via Mac mini (recommended for Windows users)
+
+Windows 11 (Microsoft Store build of iCloud Drive) is known to
+throttle or stall uploads. In practice, files written to
+`%USERPROFILE%\iCloudDrive\Hermes-Minis\inbox\` may never reach
+Minis, even though the local `iCloudDrive.exe` process looks alive
+and CPU-active.
+
+The reliable fix is to keep the iCloud-side of the queue on a host
+that syncs reliably (Mac mini / Linux / a Win VM with the Apple
+installer, not the Store build) and run `minis_bridge.py` there
+over SSH from the Win Hermes box.
+
+### Architecture
+
+```
+Win Hermes box                        Mac mini (iCloud sync is reliable)
+                              SSH (ed25519)
+  scripts/minis_bridge_mac.py  ─────────────────►  /Users/kakyo/scripts/minis_bridge.py
+                                                            │
+                                                            ▼
+                              /Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/
+                                                            │
+                                                       iCloud Drive
+                                                            │
+                                                            ▼
+                                                      iPhone Minis
+```
+
+### Install on the Mac
+
+```bash
+# On the Mac, create the queue directory.
+mkdir -p "/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis"
+mkdir -p "/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/inbox"
+mkdir -p "/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/pending"
+mkdir -p "/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/outbox"
+mkdir -p "/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/processed"
+
+# Copy minis_bridge.py into place.
+cp minis_bridge.py /Users/kakyo/scripts/minis_bridge.py
+chmod +x /Users/kakyo/scripts/minis_bridge.py
+```
+
+### Install on the Win box
+
+Copy `scripts/minis_bridge_mac.py` to your Hermes skills folder.
+The wrapper takes the same flags as `minis_bridge.py` and forwards
+them to the Mac over the existing `kanas-lan` SSH alias.
+
+```bash
+# Optional overrides via env.
+export MINIS_BRIDGE_MAC_HOST=kanas-lan
+export MINIS_BRIDGE_MAC_SCRIPT=/Users/kakyo/scripts/minis_bridge.py
+export MINIS_BRIDGE_MAC_QUEUE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis"
+```
+
+### Test
+
+```bash
+python minis_bridge_mac.py --send "hello from hermes via mac" --no-wait
+python minis_bridge_mac.py --read latest
+```
+
+You should see the request ID, then the reply (after Minis processes
+it).
+
+### SSH gotchas
+
+If `ssh kanas-lan` returns "Permission denied (publickey,...)",
+your `~/.ssh/config` is pointing the alias at the wrong identity
+file. The Mac mini accepts `id_ed25519`, not `id_ed25519_kanas`:
+
+```sshconfig
+Host kanas-lan
+    HostName 192.168.71.78
+    User kakyo
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+```
 
 ## Security
 
