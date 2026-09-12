@@ -1,5 +1,132 @@
 # Release notes
 
+## v1.2.0 — 2026-09-12 — Feishu relay becomes the default
+
+### Why
+
+Real-device testing invalidated the core iCloud assumption. Files App could
+see files written by the Mac, while Minis/iSH kept a frozen FUSE view:
+`readdir` returned an empty directory, direct `stat/open/os.access` returned
+not found, and directory inode mtimes did not refresh. A Mac-created sentinel
+also remained invisible. The iCloud path is therefore legacy, not a working
+default.
+
+### What changed
+
+- Added `scripts/feishu_relay.py`, a standard-library-only Feishu transport.
+- Added `[MINIS_REQ]` / `[MINIS_REPLY]` envelopes with request IDs.
+- Added `--send`, `--pull`, `--reply`, and `--read` commands.
+- Added `references/feishu-relay.md` with Minis install and processing steps.
+- Updated SKILL.md and README: Feishu is default; iCloud is clearly legacy.
+- Added six unit tests covering round-trip parsing, pending filtering, send,
+  pull, reply, and precise reply lookup.
+
+### Verification
+
+```text
+python -m unittest discover -s tests -v
+Ran 6 tests — OK
+
+real Feishu transport loop:
+send → pull → reply → read
+request id: minis-e2e-1789191679
+result: Feishu relay transport loop OK.
+```
+
+This proves the Feishu transport layer. It does **not** yet prove the final
+Minis-agent hop; that requires the iPhone to execute `--pull`, process the
+body, and execute `--reply` once.
+
+### Security
+
+No credential values are committed. `FEISHU_APP_SECRET` stays in local
+Environment Variables or `.feishu.env` / `.minis-feishu.env`.
+
+---
+
+## v1.1.0 — 2026-09-12 — Win → Mac mini SSH wrapper
+
+This release adds a reliable transport for Windows users. The
+Microsoft Store build of iCloud Drive is known to throttle or stall
+uploads; in testing today, files written to
+`%USERPROFILE%\iCloudDrive\Hermes-Minis\inbox\` on a Win 11 box
+never reached the iPhone Minis client, even though the local
+`iCloudDrive.exe` process looked alive and CPU-active.
+
+The Mac mini, by contrast, has been syncing reliably for weeks
+(see the v5 health-shortcut upload pipeline).
+
+### What changed
+
+- **New script: `scripts/minis_bridge_mac.py`** — a small SSH
+  wrapper on the Win Hermes box that forwards every `--send` /
+  `--read` to `/Users/kakyo/scripts/minis_bridge.py` on the Mac
+  mini over the existing `kanas-lan` SSH alias.
+- **SKILL.md** — new "Win via Mac mini (recommended for Windows
+  users)" section with architecture diagram, install steps for
+  both sides, env-var overrides, and an SSH-config gotcha.
+- **README / SKILL.md frontmatter** — version bumped to 1.1.0.
+
+### What's untouched
+
+- `minis_bridge.py` (the local script) — unchanged. Mac users
+  still call it directly.
+- `bridge-dispatch.sh` and `agent-hook.sh` — unchanged. The
+  Minis-side loop is the same.
+- `LICENSE`, `.gitignore` — unchanged.
+
+### Verified end-to-end (2026-09-12)
+
+```
+$ python minis_bridge_mac.py --send "Bridge test via Mac mini (SSH wrapper)." --no-wait
+sent 2026-09-12T03-39-23Z-bridge-test-via-mac-mini-ssh-wrapper-con -> /Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/inbox/2026-09-12T03-39-23Z-bridge-test-via-mac-mini-ssh-wrapper-con.md
+2026-09-12T03-39-23Z-bridge-test-via-mac-mini-ssh-wrapper-con
+
+$ ssh kanas-lan "ls -la '/Users/kakyo/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis/inbox/'"
+total 16
+-rw-r--r--  1 kakyo  staff  216 Sep 12 11:38 2026-09-12T03-38-26Z-smoke-test-from-windows-via-mac-summaris.md
+-rw-r--r--  1 kakyo  staff  244 Sep 12 11:39 2026-09-12T03-39-23Z-bridge-test-via-mac-mini-ssh-wrapper-con.md
+```
+
+### SSH gotcha that was hit during install
+
+`~/.ssh/config` had `kanas-lan` pointing at
+`IdentityFile ~/.ssh/id_ed25519_kanas`, but the Mac mini only
+accepts `id_ed25519`. Symptom:
+
+```
+$ ssh kanas-lan "echo ok"
+kakyo@192.168.71.78: Permission denied (publickey,password,keyboard-interactive).
+```
+
+Fix:
+
+```sshconfig
+Host kanas-lan
+    HostName 192.168.71.78
+    User kakyo
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+```
+
+### Commits
+
+- `351fbaba` — feat: add minis_bridge_mac.py
+- `aac9ad81` — docs: SKILL.md v1.1.0 — add 'Win via Mac mini' section
+
+### Migration
+
+Nothing to do for v1.0.x users:
+
+- Mac / Linux users: keep calling `minis_bridge.py` as before.
+- Win users on the Apple-installer build of iCloud Drive: keep
+  calling `minis_bridge.py` as before.
+- Win users on the Store build: switch to `minis_bridge_mac.py`
+  after putting `minis_bridge.py` on the Mac mini.
+
+---
+
 ## v1.0.1 — 2026-09-11 — docs: fix SKILL.md drift
 
 This is a documentation-only release. No code changes, no API changes,

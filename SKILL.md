@@ -1,27 +1,48 @@
 ---
 name: minis-bridge
-version: 1.1.0
+version: 1.2.0
 description: >
-  Bidirectional message bridge between Hermes Desktop and Open Minis on iPhone,
-  via an iCloud Drive message-queue directory. Trigger this skill whenever the
-  user wants to push a task from a Hermes/Windows/Mac session to Minis on the
-  iPhone and read the result back — e.g. "send this to Minis", "ask Minis to
-  summarise X", "what did Minis say about Y". Reads inbox/ for new request
-  files written by Hermes, dispatches them through the Minis agent runtime,
-  and writes the reply into outbox/ for Hermes to pick up. Works without any
-  custom HTTP server, MCP, or webhook — relies only on the iCloud Drive
-  mount that Minis already exposes at /var/minis/mounts/iCloud/.
-platforms: [ios]
+  Bidirectional relay between Hermes Desktop and Open Minis on iPhone.
+  Use when the user wants Win Hermes to send a task to an active Minis
+  session and read the answer back. The default transport is Feishu Open API
+  via scripts/feishu_relay.py; the old iCloud/iSH FUSE queue is retained only
+  as a documented legacy path because real-device tests showed external file
+  changes can remain invisible inside Minis.
+platforms: [ios, windows, macos]
 compatibility: >
-  iOS only. Minis 1.13+ required (iCloud Drive mount + iSH polling).
-  No external dependencies beyond the iCloud Drive sync interval (typically
-  5–30 seconds). The bridge is fully on-device: Minis reads and writes files
-  locally, and iCloud Drive handles transport.
+  Open Minis with Python 3 and outbound HTTPS; Feishu app credentials with
+  permission to send and list messages in the target chat. No iCloud mount,
+  callback server, or iOS Shortcut is required for the default transport.
 ---
 
-# Minis Bridge — Hermes ↔ Minis via iCloud Drive Queue
+# Minis Bridge — Hermes ↔ Minis via Feishu Relay
 
-## What it does
+## Default path (v1.2.0)
+
+```text
+Win Hermes --send → Feishu [MINIS_REQ] → Minis --pull
+Minis tools/skills → Feishu [MINIS_REPLY] → Win Hermes --read
+```
+
+Use `scripts/feishu_relay.py`. Full setup, protocol, security boundaries,
+and real verification evidence are in `references/feishu-relay.md`.
+
+When the user says **`process feishu bridge`** inside Minis:
+
+1. Run `python3 /var/minis/skills/minis-bridge/scripts/feishu_relay.py --pull`.
+2. If it prints `null`, report no pending request.
+3. Otherwise process the JSON `body` as the user task with normal Minis tools.
+4. Send the final answer with `--reply <id> --text <answer>`.
+5. Pull again, stopping after `null` or five tasks.
+
+> **Legacy warning:** The iCloud queue below is not the default. On the tested
+> iPhone/Open Minis build, Files App saw Mac writes while iSH's FUSE view kept
+> stale inode mtimes and returned `ENOENT` for those same files. Sentinel,
+> `stat`, `open`, `os.access`, and directory reopen tests did not invalidate
+> the view. Do not report the iCloud path as end-to-end working unless the
+> current device independently proves external writes are visible in iSH.
+
+## Legacy iCloud queue (kept for reference)
 
 ```
 ┌────────────────────┐                ┌────────────────────┐
@@ -140,6 +161,7 @@ https://github.com/OpenMinis/MinisSkills/tree/main/minis-bridge
 
 After cloning, make the dispatcher and hook scripts executable:
 
+```
 chmod +x /var/minis/skills/minis-bridge/scripts/bridge-dispatch.sh
 chmod +x /var/minis/skills/minis-bridge/scripts/agent-hook.sh
 ```
@@ -147,6 +169,7 @@ chmod +x /var/minis/skills/minis-bridge/scripts/agent-hook.sh
 Confirm `scripts/bridge-dispatch.sh` can read the inbox dir (it
 defaults to `/var/minis/mounts/iCloud/Hermes-Minis/` — override with
 `MINIS_BRIDGE_QUEUE` if your mount is elsewhere).
+```
 
 If the repo URL does not yet contain this skill (it is being contributed
 upstream), use the local-install fallback described at the end of this
@@ -313,10 +336,10 @@ throttle or stall uploads. In practice, files written to
 Minis, even though the local `iCloudDrive.exe` process looks alive
 and CPU-active.
 
-The reliable fix is to keep the iCloud-side of the queue on a host
-that syncs reliably (Mac mini / Linux / a Win VM with the Apple
-installer, not the Store build) and run `minis_bridge.py` there
-over SSH from the Win Hermes box.
+Moving writes to a Mac fixes only the Windows → Apple upload leg. It does
+**not** fix the iPhone iSH FUSE view: real-device tests showed the file in
+Files App while iSH still returned `ENOENT`. Keep this SSH wrapper only for
+legacy regression tests; use the Feishu relay above for production.
 
 ### Architecture
 
@@ -351,7 +374,7 @@ chmod +x /Users/kakyo/scripts/minis_bridge.py
 
 ### Install on the Win box
 
-Copy `scripts/minis_bridge_mac.py` to your Hermes skills folder.
+Copy `scripts/minis_bridge_mac.py` to your Hermes scripts folder.
 The wrapper takes the same flags as `minis_bridge.py` and forwards
 them to the Mac over the existing `kanas-lan` SSH alias.
 
@@ -414,21 +437,13 @@ install from a local copy:
 4. Restart any open Minis conversation so the skill list refreshes
 5. Continue from Step 4 of the normal install
 
-## Advanced: talking to Minis's debug server
+## Advanced: unverified debug-server path
 
-For true conversation continuation and lower latency, Minis exposes a
-debug HTTP server when launched with the right env vars (see
-`NSLocalNetworkUsageDescription` in Minis's Info.plist — the app is
-already wired for this). With the debug server reachable over Tailscale:
-
-```
-http://<iphone-tailnet-ip>:debug-port/v1/chat
-```
-
-the bridge can push prompts into an existing conversation instead of
-starting a new one per request. This path is **not** in this skill's
-default scope — if you want it, file an issue or extend the
-`scripts/bridge-dispatch.sh` helper.
+Earlier drafts inferred a chat endpoint from `NSLocalNetworkUsageDescription`
+and URL-scheme declarations. Source inspection did **not** confirm a usable
+`/v1/chat` API or prompt-injection deep link. Do not build on this path until
+an actual Minis version exposes and documents an endpoint that can be called
+and read back on a real device.
 
 ## Related
 

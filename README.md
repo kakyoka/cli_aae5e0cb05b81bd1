@@ -1,134 +1,114 @@
 # minis-bridge
 
-Bidirectional message bridge between [Open Minis](https://github.com/OpenMinis/OpenMinis) (iPhone / iPad) and a desktop agent runtime (e.g. [Hermes Agent](https://github.com/just-every/hermes-agent)), via an **iCloud Drive** message-queue directory.
+Win Hermes Desktop 与 iPhone Open Minis 的双向任务桥。
 
-No HTTP server. No MCP. No webhook. No SSH. The transport is iCloud Drive sync, which Apple already encrypts end-to-end and which Minis already exposes as a mounted filesystem inside its on-device iSH sandbox.
+## v1.2 默认架构：Feishu Relay
 
-```
-┌────────────────────┐                ┌────────────────────┐
-│  Hermes Desktop    │                │  Open Minis on     │
-│  (Win / Mac / VPS) │                │  iPhone (iSH)      │
-│                    │                │                    │
-│  scripts/          │   iCloud Drive │  bridge daemon     │
-│  minis_bridge.py   │ ─────────────► │  (this skill)      │
-│                    │                │                    │
-│  writes inbox/*.md │   inbox/  ──►  │  polls every 15 s  │
-│  reads outbox/*.md │ ◄──  outbox/   │  writes result     │
-└────────────────────┘                └────────────────────┘
+```text
+Win Hermes --send → Feishu [MINIS_REQ] → iPhone Minis --pull
+Minis tools/skills → Feishu [MINIS_REPLY] → Win Hermes --read
 ```
 
-## What you get
+默认传输脚本：`scripts/feishu_relay.py`
 
-- A `SKILL.md` describing the protocol and the Minis-side install.
-- `scripts/bridge-dispatch.sh` — a single-tick Minis-side dispatcher.
-- `scripts/agent-hook.sh` — a pluggable hook the dispatcher calls to
-  forward a request into the live Minis conversation. The default
-  hook is a placeholder; see the SKILL doc for two working
-  implementations.
-- `scripts/minis_bridge.py` — a Hermes-side CLI: `--send`,
-  `--send-file`, `--read`, `--wait`, `--no-wait`.
-- `release-notes.md` — change history.
+- 不经过 iCloud Drive；
+- 不依赖 iSH FUSE；
+- 不需要公网 callback、MCP 或 iOS Shortcut；
+- 用 `[MINIS_REQ]` / `[MINIS_REPLY]` 和 request ID 做路由；
+- 与现有 `feishu-hermes-bridge` 隔离：后者只消费 `sender_type=user`，relay 消息来自 `sender_type=app`。
 
-## Changes
+完整安装、Minis 处理命令和安全边界：[`references/feishu-relay.md`](references/feishu-relay.md)
 
-### v1.0.1 (2026-09-11) — docs-only
+## Quick start
 
-Fixed three documentation drifts in `SKILL.md`:
-
-- Step 2 no longer tells you to `chmod +x scripts/bridge-loop.sh` —
-  that script does not exist; the real pair is `bridge-dispatch.sh`
-  and `agent-hook.sh`.
-- The "send a Substack article to Minis" example no longer uses
-  `--attach <URL>`, which the CLI never supported. It now uses
-  `--send-file ./local.md`, which is a real flag.
-- No mention of a fictional `--link` flag.
-
-Every `--flag` mentioned in `SKILL.md` is now defined in
-`scripts/minis_bridge.py`. See `release-notes.md` for the full audit
-table.
-
-Commit: `92406f81`.
-
-### v1.0.0 (2026-09-11) — initial release
-
-Bidirectional iCloud Drive message-queue bridge. See `SKILL.md` for
-the full protocol and install. Commit: `f7e9dfb`.
-
-## Install
-
-### 1. Create the queue on iCloud Drive
-
-In the iPhone Files app:
-
-```
-iCloud Drive / Hermes-Minis /
-  ├── inbox/
-  ├── outbox/
-  └── processed/
-```
-
-Minis will see this as `/var/minis/mounts/iCloud/Hermes-Minis/`.
-
-### 2. Install the Minis-side skill
-
-In a Minis conversation, ask the agent to:
-
-```
-Install this skill. Copy SKILL.md to /var/minis/skills/minis-bridge/
-and the three scripts under scripts/ to
-/var/minis/skills/minis-bridge/scripts/, with execute permission.
-```
-
-Or, if you have a local clone of this repo, drop the `minis-bridge/`
-folder into Minis's `/var/minis/skills/` via the Files app.
-
-### 3. Install the Hermes-side helper
+### Win 发送
 
 ```bash
-# from this repo
-cp scripts/minis_bridge.py ~/hermes-home/skills/minis-bridge/scripts/
-chmod +x ~/hermes-home/skills/minis-bridge/scripts/minis_bridge.py
+python scripts/feishu_relay.py --send "请总结今天的 Apple 新闻"
+# 输出 req-... ID
 ```
 
-Set the queue path:
+### Minis 处理
+
+在 Minis session 里说：
+
+```text
+process feishu bridge
+```
+
+Skill 会指导 Minis：
+
+1. `python3 .../feishu_relay.py --pull`
+2. 把 JSON `body` 当作用户任务处理
+3. `python3 .../feishu_relay.py --reply <id> --text <answer>`
+
+### Win 读回复
 
 ```bash
-# macOS
-export MINIS_BRIDGE_QUEUE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis"
-
-# Windows (with iCloud for Windows)
-export MINIS_BRIDGE_QUEUE="$USERPROFILE/iCloudDrive/Hermes-Minis"
+python scripts/feishu_relay.py --read <request-id>
 ```
 
-### 4. Start the Minis-side loop
+## One-time configuration
 
-In a Minis conversation:
+Win 与 Minis 本地环境需要：
 
-```
-Start the minis-bridge loop. Every 20 seconds run
-/var/minis/skills/minis-bridge/scripts/bridge-dispatch.sh and log
-each tick to /var/minis/memory/minis-bridge.log. Confirm by listing
-inbox/ and reporting the count of pending files.
-```
-
-### 5. Test
-
-```bash
-python minis_bridge.py --send "Hello from Hermes. Reply with one-line ack." --wait 60
+```text
+FEISHU_APP_ID
+FEISHU_APP_SECRET
+FEISHU_MINIS_CHAT_ID
 ```
 
-You should see the reply printed within 15–90 seconds.
+也兼容 `FEISHU_CHAT_ID` / `CHAT_ID` 作为 chat fallback。密钥只放本地环境或 `~/.feishu.env` / `~/.minis-feishu.env`，不得提交 GitHub。
 
-## File protocol
+## Verification status
 
-Every request and reply is a single Markdown file. See `SKILL.md` for
-the full frontmatter and body schema.
+2026-09-12 已完成真实飞书传输回环：
 
-## Related
+```text
+send → pull → reply → read
+request id: minis-e2e-1789191679
+result: Feishu relay transport loop OK.
+```
 
-- [Open Minis](https://github.com/OpenMinis/OpenMinis) — the iOS agent app.
-- [OpenMinis/MinisSkills](https://github.com/OpenMinis/MinisSkills) — the upstream community skill catalog.
+这证明飞书 API 传输、协议解析和关联 ID 工作。**完整 Win↔iPhone Minis 端到端仍需 iPhone Minis 真机执行一次 `--pull` + agent 处理 + `--reply` 后才能宣告通过。**
+
+## Legacy: iCloud queue（不可作为默认）
+
+旧文件：
+
+- `scripts/minis_bridge.py`
+- `scripts/minis_bridge_mac.py`
+- `scripts/bridge-dispatch.sh`
+- `scripts/agent-hook.sh`
+
+2026-09-12 真机发现：Files App 能看到 Mac 写入，但 Minis/iSH 的 FUSE view 可能冻结；`readdir/stat/open/os.access` 均看不到外部文件，目录 inode mtime 也不刷新。sentinel 测试同样失败。
+
+因此 iCloud 队列只保留用于历史、回归测试或未来 iOS/Minis 修复后的复验，**不可再称为当前可用端到端方案**。
+
+## Files
+
+```text
+SKILL.md
+README.md
+release-notes.md
+references/
+  feishu-relay.md
+scripts/
+  feishu_relay.py          # v1.2 默认
+  minis_bridge.py          # legacy iCloud
+  minis_bridge_mac.py      # legacy Win→Mac→iCloud
+  bridge-dispatch.sh       # legacy Minis dispatcher
+  agent-hook.sh            # legacy placeholder
+ tests/
+  test_feishu_relay.py
+```
+
+## Security
+
+- 不在仓库、聊天、邮件中保存 `FEISHU_APP_SECRET`；
+- v1 可复用现有 chat，但建议后续新建 Minis 专用 chat / 专用飞书应用并收紧权限；
+- relay 只处理精确协议前缀和 `sender_type=app` 消息。
 
 ## License
 
-Apache 2.0. See `LICENSE`.
+Apache-2.0。变更记录见 [`release-notes.md`](release-notes.md)。
