@@ -9,8 +9,11 @@ sys.path.insert(0, str(SCRIPTS))
 
 from feishu_relay import (
     decode_envelope,
+    encode_push,
+    encode_push_ack,
     encode_reply,
     encode_request,
+    find_pending_pushes,
     find_pending_requests,
     find_reply,
     main,
@@ -137,6 +140,64 @@ class EnvelopeTests(unittest.TestCase):
             rc = main(["--read", "wanted"], client=FakeClient())
         self.assertEqual(rc, 0)
         self.assertEqual(stdout.getvalue().strip(), "right")
+
+    def test_pending_push_filter_excludes_acknowledged_push(self):
+        def msg(text, created):
+            return {
+                "create_time": str(created),
+                "sender": {"sender_type": "app"},
+                "body": {"content": __import__("json").dumps({"text": text})},
+            }
+        items = [
+            msg(encode_push("push-old", "old"), 1),
+            msg(encode_push_ack("push-old"), 2),
+            msg(encode_push("push-new", "hello Hermes"), 3),
+        ]
+        pending = find_pending_pushes(items)
+        self.assertEqual([(x.request_id, x.body) for x in pending], [("push-new", "hello Hermes")])
+
+    def test_push_and_pull_push_cli(self):
+        class PushClient:
+            def __init__(self):
+                self.sent = []
+            def send_text(self, text):
+                self.sent.append(text)
+                return "om_push"
+
+        sender = PushClient()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            rc = main(["--push", "Minis 主动消息", "--id", "push-fixed"], client=sender)
+        self.assertEqual(rc, 0)
+        self.assertEqual(stdout.getvalue().strip(), "push-fixed")
+        self.assertEqual(decode_envelope(sender.sent[0]).kind, "push")
+
+        class PullClient:
+            def list_messages(self):
+                return [{
+                    "create_time": "1",
+                    "sender": {"sender_type": "app"},
+                    "body": {"content": __import__("json").dumps({"text": sender.sent[0]})},
+                }]
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            rc = main(["--pull-push"], client=PullClient())
+        self.assertEqual(rc, 0)
+        self.assertEqual(__import__("json").loads(stdout.getvalue()), {"id": "push-fixed", "body": "Minis 主动消息"})
+
+    def test_ack_push_cli_posts_ack(self):
+        class FakeClient:
+            def __init__(self):
+                self.sent = []
+            def list_messages(self):
+                return []
+            def send_text(self, text):
+                self.sent.append(text)
+                return "om_ack"
+        client = FakeClient()
+        rc = main(["--ack-push", "push-1"], client=client)
+        self.assertEqual(rc, 0)
+        self.assertEqual(decode_envelope(client.sent[0]).kind, "push_ack")
 
 
 if __name__ == "__main__":

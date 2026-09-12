@@ -1,5 +1,21 @@
 # Release notes
 
+## v1.3.0 — 2026-09-12 — Minis-initiated push messages
+
+- Added `[MINIS_PUSH]` and `[MINIS_PUSH_ACK]` envelopes.
+- Minis can start a message with `--push TEXT [--id ID]` without an existing
+  Windows request.
+- Hermes receives the oldest unacknowledged message with `--pull-push` and
+  confirms it with `--ack-push ID`.
+- Acknowledged pushes are excluded from later pulls.
+- Test suite expanded from 7 to 10 tests; all pass.
+
+This adds durable reverse delivery over Feishu. Automatic injection into an
+already-open Hermes Desktop conversation is intentionally not claimed; that
+requires a separately configured receiver/cron or gateway hook.
+
+---
+
 ## v1.2.1 — 2026-09-12 — real iPhone E2E + reply idempotency
 
 ### Complete real-device result

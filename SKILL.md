@@ -1,6 +1,6 @@
 ---
 name: minis-bridge
-version: 1.2.1
+version: 1.3.0
 description: >
   Bidirectional relay between Hermes Desktop and Open Minis on iPhone.
   Use when the user wants Win Hermes to send a task to an active Minis
@@ -17,7 +17,7 @@ compatibility: >
 
 # Minis Bridge — Hermes ↔ Minis via Feishu Relay
 
-## Default path (v1.2.1)
+## Default path (v1.3.0)
 
 ```text
 Win Hermes --send → Feishu [MINIS_REQ] → Minis --pull
@@ -34,6 +34,27 @@ When the user says **`process feishu bridge`** inside Minis:
 3. Otherwise process the JSON `body` as the user task with normal Minis tools.
 4. Send the final answer with `--reply <id> --text <answer>`.
 5. Pull again, stopping after `null` or five tasks.
+
+## Minis-initiated message (v1.3.0)
+
+To let Minis start a new message without an existing Windows request, run on
+the iPhone:
+
+```sh
+python3 /var/minis/skills/minis-bridge/scripts/feishu_relay.py \
+  --push "需要主动告诉 Hermes 的内容"
+```
+
+The command prints a `push-...` ID. Hermes receives and acknowledges it with:
+
+```bash
+python scripts/feishu_relay.py --pull-push
+python scripts/feishu_relay.py --ack-push <push-id>
+```
+
+Protocol prefixes are `[MINIS_PUSH]` and `[MINIS_PUSH_ACK]`. Acknowledged pushes
+are excluded from later `--pull-push` results. This is a durable Feishu queue;
+it does not by itself inject text into an already-open Desktop conversation.
 
 > **Legacy warning:** The iCloud queue below is not the default. On the tested
 > iPhone/Open Minis build, Files App saw Mac writes while iSH's FUSE view kept

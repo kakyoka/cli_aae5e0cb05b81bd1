@@ -48,6 +48,24 @@ Skill 会指导 Minis：
 python scripts/feishu_relay.py --read <request-id>
 ```
 
+### Minis 主动给 Hermes 发新消息（v1.3）
+
+在 Minis：
+
+```sh
+python3 /var/minis/skills/minis-bridge/scripts/feishu_relay.py \
+  --push "卡卡让我主动转告 Hermes：……"
+```
+
+在 Hermes：
+
+```bash
+python scripts/feishu_relay.py --pull-push
+python scripts/feishu_relay.py --ack-push <push-id>
+```
+
+`--pull-push` 返回最早一条未确认消息的 JSON；`--ack-push` 后不会再次拉到。该消息会持久停在飞书队列里，但不会凭空注入已打开的 Desktop 对话；无人值守提醒需要再配置常驻 receiver/cron。
+
 ## One-time configuration
 
 Win 与 Minis 本地环境需要：

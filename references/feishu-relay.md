@@ -121,6 +121,37 @@ Minis 最终答案
 - `--pull` 返回最早一条未回复请求。
 - `--read` 只返回匹配 request id 的最新回复。
 
+### Minis-initiated push (v1.3)
+
+```text
+[MINIS_PUSH]
+{"id":"push-123"}
+
+Minis 主动消息
+```
+
+Hermes 确认：
+
+```text
+[MINIS_PUSH_ACK]
+{"id":"push-123"}
+
+ack
+```
+
+CLI：
+
+```bash
+# iPhone Minis
+python3 scripts/feishu_relay.py --push "主动消息"
+
+# Hermes
+python scripts/feishu_relay.py --pull-push
+python scripts/feishu_relay.py --ack-push <push-id>
+```
+
+确认后的 push 不再由 `--pull-push` 返回。
+
 ## Verified evidence
 
 ### Complete Win ↔ iPhone Minis E2E — passed

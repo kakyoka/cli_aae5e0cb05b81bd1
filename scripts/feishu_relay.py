@@ -13,6 +13,8 @@ from typing import Sequence
 
 REQUEST_PREFIX = "[MINIS_REQ]"
 REPLY_PREFIX = "[MINIS_REPLY]"
+PUSH_PREFIX = "[MINIS_PUSH]"
+PUSH_ACK_PREFIX = "[MINIS_PUSH_ACK]"
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,16 @@ def encode_reply(request_id: str, reply: str) -> str:
     return f"{REPLY_PREFIX}\n{meta}\n\n{reply}"
 
 
+def encode_push(push_id: str, body: str) -> str:
+    meta = json.dumps({"id": push_id}, ensure_ascii=False, separators=(",", ":"))
+    return f"{PUSH_PREFIX}\n{meta}\n\n{body}"
+
+
+def encode_push_ack(push_id: str) -> str:
+    meta = json.dumps({"id": push_id}, ensure_ascii=False, separators=(",", ":"))
+    return f"{PUSH_ACK_PREFIX}\n{meta}\n\nack"
+
+
 def decode_envelope(text: str) -> Envelope:
     lines = text.splitlines()
     if len(lines) < 3:
@@ -41,6 +53,10 @@ def decode_envelope(text: str) -> Envelope:
         kind = "request"
     elif prefix == REPLY_PREFIX:
         kind = "reply"
+    elif prefix == PUSH_PREFIX:
+        kind = "push"
+    elif prefix == PUSH_ACK_PREFIX:
+        kind = "push_ack"
     else:
         raise ValueError("not a Minis relay message")
     meta = json.loads(lines[1])
@@ -74,6 +90,13 @@ def find_reply(items: list[dict], request_id: str) -> Envelope | None:
         if env and env.kind == "reply" and env.request_id == request_id:
             return env
     return None
+
+
+def find_pending_pushes(items: list[dict]) -> list[Envelope]:
+    ordered = sorted(items, key=lambda x: int(x.get("create_time", 0)))
+    envelopes = [env for item in ordered if (env := _message_envelope(item))]
+    acknowledged = {env.request_id for env in envelopes if env.kind == "push_ack"}
+    return [env for env in envelopes if env.kind == "push" and env.request_id not in acknowledged]
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -172,10 +195,30 @@ def main(argv: Sequence[str] | None = None, client=None) -> int:
     actions.add_argument("--pull", action="store_true")
     actions.add_argument("--reply", metavar="REQUEST_ID")
     actions.add_argument("--read", metavar="REQUEST_ID")
+    actions.add_argument("--push", metavar="TEXT")
+    actions.add_argument("--pull-push", action="store_true")
+    actions.add_argument("--ack-push", metavar="PUSH_ID")
     parser.add_argument("--id", dest="request_id")
     parser.add_argument("--text", metavar="TEXT")
     args = parser.parse_args(argv)
     active_client = client or make_client()
+    if args.pull_push:
+        pending = find_pending_pushes(active_client.list_messages())
+        if not pending:
+            print("null")
+            return 3
+        env = pending[0]
+        print(json.dumps({"id": env.request_id, "body": env.body}, ensure_ascii=False))
+        return 0
+    if args.ack_push:
+        active_client.send_text(encode_push_ack(args.ack_push))
+        print(args.ack_push)
+        return 0
+    if args.push:
+        push_id = args.request_id or f"push-{int(time.time())}"
+        active_client.send_text(encode_push(push_id, args.push))
+        print(push_id)
+        return 0
     if args.read:
         reply = find_reply(active_client.list_messages(), args.read)
         if not reply:
