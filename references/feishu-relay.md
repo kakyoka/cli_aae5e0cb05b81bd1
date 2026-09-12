@@ -142,6 +142,13 @@ v1.2.1 prevents recurrence by checking for an existing reply before sending.
 The guard passed seven unit tests and a real probe that returned
 `already replied` without creating another message.
 
+The iPhone then updated itself to v1.2.1 through request
+`iphone-minis-v121-1789226073`. The device returned `MINIS_V121_UPDATED`; an
+independent Feishu history query observed exactly one request and one reply.
+Request time was `2026-09-12T15:14:44.392Z`, reply time was
+`2026-09-12T15:28:00.358Z`, elapsed `795.966 s` including the user's manual
+trigger delay.
+
 ### Earlier Windows transport-only loop
 
 ```text

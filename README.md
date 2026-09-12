@@ -90,6 +90,22 @@ v1.2.1 adds reply idempotency: `--reply` checks history and returns
 `<id> already replied` without sending if a reply already exists. This guard
 passed seven unit tests and a real Feishu probe.
 
+### v1.2.1 deployed on the iPhone — confirmed
+
+```text
+request id: iphone-minis-v121-1789226073
+request: 2026-09-12T15:14:44.392Z
+reply:   2026-09-12T15:28:00.358Z
+elapsed: 795.966 s (13 m 15.966 s; includes waiting for the manual trigger)
+result:  MINIS_V121_UPDATED
+messages observed by Feishu API: 1 request, 1 reply
+```
+
+The Minis device reported commit `3591db1`, SKILL version `1.2.1`, the
+idempotency branch present, and `--help` passing. The independent Feishu
+history check found exactly one reply, so the duplicate-reply fix is active
+on the iPhone.
+
 ### Earlier transport-only loop
 
 ```text

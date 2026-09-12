@@ -32,6 +32,23 @@ real Feishu idempotency probe:
 iphone-minis-smoke-1789192695 already replied
 ```
 
+### iPhone deployment confirmation
+
+A second real request upgraded the iPhone installation and verified the fix:
+
+```text
+request id: iphone-minis-v121-1789226073
+request: 2026-09-12T15:14:44.392Z
+reply:   2026-09-12T15:28:00.358Z
+elapsed: 795.966 s (includes manual-trigger delay)
+result:  MINIS_V121_UPDATED
+Feishu history: 1 request, 1 reply
+```
+
+The Minis device reported commit `3591db1`, SKILL v1.2.1, idempotency code
+present, and `--help` passing. The independent one-reply count confirms the
+fix is deployed rather than merely documented.
+
 ---
 
 ## v1.2.0 — 2026-09-12 — Feishu relay becomes the default
