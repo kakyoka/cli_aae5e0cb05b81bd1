@@ -1,0 +1,10 @@
+{
+  "name": "minis-bridge",
+  "label": "Minis Bridge",
+  "description": "Deliver Minis replies back into the originating Hermes session.",
+  "icon": "MessageSquare",
+  "version": "1.4.0",
+  "tab": { "path": "/minis-bridge", "hidden": true },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

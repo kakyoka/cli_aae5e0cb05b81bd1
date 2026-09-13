@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Feishu transport for Win Hermes <-> iPhone Open Minis."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 import argparse
 import json
 import os
@@ -22,10 +24,14 @@ class Envelope:
     kind: str
     request_id: str
     body: str
+    route: dict[str, str] = field(default_factory=dict)
 
 
-def encode_request(request_id: str, prompt: str) -> str:
-    meta = json.dumps({"id": request_id}, ensure_ascii=False, separators=(",", ":"))
+def encode_request(request_id: str, prompt: str, route: dict[str, str] | None = None) -> str:
+    payload: dict[str, object] = {"id": request_id}
+    if route:
+        payload["route"] = route
+    meta = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     return f"{REQUEST_PREFIX}\n{meta}\n\n{prompt}"
 
 
@@ -63,7 +69,11 @@ def decode_envelope(text: str) -> Envelope:
     if not meta.get("id"):
         raise ValueError("missing request id")
     body = "\n".join(lines[3:] if lines[2] == "" else lines[2:])
-    return Envelope(kind=kind, request_id=str(meta["id"]), body=body)
+    route = meta.get("route")
+    if not isinstance(route, dict):
+        route = {}
+    clean_route = {str(k): str(v) for k, v in route.items() if v is not None}
+    return Envelope(kind=kind, request_id=str(meta["id"]), body=body, route=clean_route)
 
 
 def _message_envelope(item: dict) -> Envelope | None:
@@ -245,7 +255,15 @@ def main(argv: Sequence[str] | None = None, client=None) -> int:
         print(json.dumps({"id": env.request_id, "body": env.body}, ensure_ascii=False))
         return 0
     request_id = args.request_id or f"req-{int(time.time())}"
-    active_client.send_text(encode_request(request_id, args.send))
+    session_id = os.environ.get("HERMES_SESSION_ID", "").strip()
+    route = {}
+    if session_id:
+        route = {
+            "node": os.environ.get("MINIS_BRIDGE_NODE", "windows-desktop").strip() or "windows-desktop",
+            "profile": os.environ.get("HERMES_SESSION_PROFILE", "").strip() or "default",
+            "session_id": session_id,
+        }
+    active_client.send_text(encode_request(request_id, args.send, route=route))
     print(request_id)
     return 0
 

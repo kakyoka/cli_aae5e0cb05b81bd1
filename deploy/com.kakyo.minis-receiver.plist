@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kakyo.minis-receiver</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/kakyo/minis-receiver/collector.py</string>
+        <string>--bind</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8786</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/kakyo/minis-receiver</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/kakyo/minis-receiver/collector.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/kakyo/minis-receiver/collector.err.log</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

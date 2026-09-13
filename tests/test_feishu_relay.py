@@ -1,8 +1,10 @@
 import io
+import os
 import sys
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -62,6 +64,35 @@ class EnvelopeTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(stdout.getvalue().strip(), "req-fixed")
         self.assertEqual(decode_envelope(client.sent[0]).body, "ping")
+
+    def test_send_cli_embeds_current_hermes_session_route(self):
+        class FakeClient:
+            def __init__(self):
+                self.sent = []
+
+            def send_text(self, text):
+                self.sent.append(text)
+                return "om_routed"
+
+        client = FakeClient()
+        env = {
+            "HERMES_SESSION_ID": "session-current",
+            "HERMES_SESSION_PROFILE": "default",
+            "MINIS_BRIDGE_NODE": "windows-desktop",
+        }
+        with patch.dict(os.environ, env, clear=False), redirect_stdout(io.StringIO()):
+            rc = main(["--send", "ping", "--id", "req-routed"], client=client)
+        self.assertEqual(rc, 0)
+        decoded = decode_envelope(client.sent[0])
+        self.assertEqual(decoded.route, {
+            "node": "windows-desktop",
+            "profile": "default",
+            "session_id": "session-current",
+        })
+
+    def test_legacy_envelope_has_empty_route(self):
+        decoded = decode_envelope('[MINIS_REPLY]\n{"id":"legacy"}\n\nok')
+        self.assertEqual(decoded.route, {})
 
     def test_pull_cli_returns_oldest_pending_request_as_json(self):
         class FakeClient:

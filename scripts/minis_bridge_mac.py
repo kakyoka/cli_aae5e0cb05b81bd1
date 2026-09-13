@@ -14,8 +14,8 @@ Same CLI surface as the local minis_bridge.py:
   python minis_bridge_mac.py --read latest
   python minis_bridge_mac.py --read <id>
 
-The script forwards --send / --read to the remote minis_bridge.py via
-SSH and streams the remote stdout / stderr back.
+The script forwards --send / --send-file / --read to the remote
+minis_bridge.py via SSH and streams the remote stdout / stderr back.
 
 Env (optional):
   MINIS_BRIDGE_MAC_HOST   default: kanas-lan (your SSH alias)
@@ -23,6 +23,7 @@ Env (optional):
   MINIS_BRIDGE_MAC_QUEUE  default: ~/Library/Mobile Documents/com~apple~CloudDocs/Hermes-Minis
 """
 import argparse
+import pathlib
 import subprocess
 import sys
 

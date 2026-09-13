@@ -1,0 +1,4 @@
+name: minis-bridge
+version: 1.4.0
+description: Minis relay deliverer — returns Minis replies into the originating Hermes session via the official JSON-RPC gateway.
+author: Hermes + 卡卡妖
